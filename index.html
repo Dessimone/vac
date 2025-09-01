@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Teste VAC Online</title>
+  <style>
+    body{margin:0;font-family:system-ui,Arial;background:#0b1020;color:#f8fafc}
+    .wrap{max-width:900px;margin:20px auto;padding:16px}
+    .card{background:#0f152b;border-radius:16px;padding:24px;box-shadow:0 8px 24px rgba(0,0,0,.3)}
+    h1,h2{margin:0}
+    button{cursor:pointer}
+    .options{display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;margin-top:20px}
+    .opt{background:#101830;border:1px solid #222a50;border-radius:12px;padding:16px;font-size:22px;font-weight:bold;color:#ffffff}
+    .opt:hover{background:#182048;color:#ffffff}
+    .progress{height:8px;background:#1c254d;border-radius:999px;overflow:hidden;margin-top:8px}
+    .bar{height:100%;width:0;background:linear-gradient(90deg,#4ea1ff,#3ad39a);transition:width .3s}
+    .timer{margin-top:12px}
+    .track{height:10px;background:#1c254d;border-radius:999px;overflow:hidden}
+    .fill{height:100%;width:100%;background:linear-gradient(90deg,#ff6473,#ffd166)}
+    .result .row{margin:10px 0}
+    .label{font-weight:bold}
+    .track2{height:14px;background:#101533;border-radius:999px;overflow:hidden}
+    .fill2{height:100%;width:0;transition:width .6s}
+    #capture{padding:20px;background:#ffffff;color:#111 !important;border-radius:12px}
+  </style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="card" id="stage-start">
+    <h1>Teste Representacional (VAC)</h1>
+    <p style="font-size:16px; color:#bbb; margin-top:6px; margin-bottom:14px;">
+      Criado por Marcelo de Simone
+    </p>
+    <p>Você terá <b>5 segundos</b> para escolher apenas uma palavra que represente você neste momento. Vá pelo impulso.</p>
+    <button id="btn-begin">Iniciar teste</button>
+  </div>
+
+  <div class="card" id="stage-quiz" style="display:none">
+    <h2 id="qtitle">Questão 1</h2>
+    <div class="progress"><div class="bar" id="bar"></div></div>
+    <div class="timer">
+      <div class="track"><div class="fill" id="timefill"></div></div>
+      <div id="timeleft">5s</div>
+    </div>
+    <div class="options" id="options"></div>
+  </div>
+
+  <div class="card" id="stage-result" style="display:none">
+    <div id="capture">
+      <h2>Resultado</h2>
+      <p id="summary"></p>
+      <p id="data-atual" style="font-size:14px; color:#444; margin:6px 0;"></p>
+      <div class="result" id="result"></div>
+    </div>
+    <button id="btn-restart">Refazer</button>
+    <button id="btn-save">Salvar resultado como imagem</button>
+  </div>
+
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script>
+document.addEventListener("DOMContentLoaded", () => {
+  const visual=["cor","brilho","forma","imagem","desenho","perspectiva","contraste","sombra","quadro","detalhe","mapa","panorama","estética","padrão","ilustração","foco","layout","figura","visão","cenário","claridade","gráfico","diagrama","vitrine","mosaico"];
+  const auditivo=["ritmo","melodia","eco","timbre","volume","silêncio","harmonia","ruído","sotaque","cadência","conversa","som","batida","acorde","canto","fala","tom","entonação","ouvido","microfone","refrão","sussurro","clique","campainha","ressonância"];
+  const cines=["textura","toque","pressão","calor","frio","peso","movimento","equilíbrio","firmeza","maciez","cheiro","aroma","sabor","temperatura","agarre","apoio","gesto","pulso","energia","força","contato","pegada","tato","vibração","flexibilidade"];
+  const questions = Array.from({length:25},(_,i)=>({A:visual[i],B:auditivo[i],C:cines[i]}));
+
+  const sStart=document.getElementById("stage-start");
+  const sQuiz=document.getElementById("stage-quiz");
+  const sResult=document.getElementById("stage-result");
+  const btnBegin=document.getElementById("btn-begin");
+  const btnRestart=document.getElementById("btn-restart");
+  const btnSave=document.getElementById("btn-save");
+  const qtitle=document.getElementById("qtitle");
+  const optionsEl=document.getElementById("options");
+  const bar=document.getElementById("bar");
+  const timefill=document.getElementById("timefill");
+  const timeleft=document.getElementById("timeleft");
+  const summary=document.getElementById("summary");
+  const result=document.getElementById("result");
+  const capture=document.getElementById("capture");
+  const dataAtualEl=document.getElementById("data-atual");
+
+  let i=0,answers=[],timer=null;
+  const QUESTION_TIME=5;
+
+  btnBegin.onclick=()=>{sStart.style.display="none";sQuiz.style.display="block";i=0;answers=[];render();};
+  btnRestart.onclick=()=>{sResult.style.display="none";sStart.style.display="block";};
+  btnSave.onclick=()=>{html2canvas(capture,{backgroundColor:"#ffffff"}).then(canvas=>{
+    const link=document.createElement("a");
+    link.download="resultado.png";
+    link.href=canvas.toDataURL();
+    link.click();
+  });};
+
+  function render(){
+    qtitle.textContent=`Questão ${i+1}`;
+    bar.style.width=`${(i/questions.length)*100}%`;
+    optionsEl.innerHTML="";
+    [["A",questions[i].A],["B",questions[i].B],["C",questions[i].C]].forEach(([k,w])=>{
+      const b=document.createElement("button");
+      b.className="opt"; b.textContent=w;
+      b.onclick=()=>pick(k);
+      optionsEl.appendChild(b);
+    });
+    startTimer();
+  }
+
+  function startTimer(){
+    let remaining=QUESTION_TIME;
+    timefill.style.width="100%";
+    timeleft.textContent=`${remaining}s`;
+    clearInterval(timer);
+    timer=setInterval(()=>{
+      remaining-=0.1;
+      const pct=(remaining/QUESTION_TIME)*100;
+      timefill.style.width=pct+"%";
+      timeleft.textContent=`${Math.ceil(remaining)}s`;
+      if(remaining<=0){clearInterval(timer);autoPick();}
+    },100);
+  }
+
+  function autoPick(){
+    const letters=["A","B","C"];
+    pick(letters[Math.floor(Math.random()*3)]);
+  }
+
+  function pick(letter){
+    clearInterval(timer);
+    answers[i]=letter; i++;
+    if(i>=questions.length){showResult();} else {render();}
+  }
+
+  function showResult(){
+    sQuiz.style.display="none"; sResult.style.display="block";
+    const cntA=answers.filter(a=>a==="A").length;
+    const cntB=answers.filter(a=>a==="B").length;
+    const cntC=answers.filter(a=>a==="C").length;
+    const pctV=cntA*4, pctA=cntB*4, pctC=cntC*4;
+
+    const ranking=[
+      {p:"Visual",pct:pctV,cls:"#4ea1ff"},
+      {p:"Auditivo",pct:pctA,cls:"#3ad39a"},
+      {p:"Cinestésico",pct:pctC,cls:"#ff9a52"}
+    ].sort((a,b)=>b.pct-a.pct);
+
+    summary.textContent=`Seu perfil dominante é ${ranking[0].p} (${ranking[0].pct}%)`;
+
+    // 👉 insere a data atual
+    const hoje = new Date();
+    dataAtualEl.textContent = "Data: " + hoje.toLocaleDateString("pt-BR");
+
+    result.innerHTML="";
+    [["Visual",pctV,"#4ea1ff"],["Auditivo",pctA,"#3ad39a"],["Cinestésico",pctC,"#ff9a52"]]
+      .forEach(([lab,pct,col])=>{
+        const row=document.createElement("div");
+        row.className="row";
+        row.innerHTML=`<div class="label">${lab}: ${pct}%</div>
+                       <div class="track2"><div class="fill2" style="width:${pct}%;background:${col}"></div></div>`;
+        result.appendChild(row);
+      });
+  }
+});
+</script>
+</body>
+</html>
