@@ -33,7 +33,7 @@
     <p style="font-size:16px; color:#bbb; margin-top:6px; margin-bottom:14px;">
       Criado por Marcelo de Simone
     </p>
-    <p>Você terá <b>5 segundos</b> para escolher apenas uma palavra que represente você neste momento. Vá pelo impulso.</p>
+    <p>Você terá <b>10 segundos</b> para escolher apenas uma palavra que represente você neste momento. Vá pelo impulso.</p>
     <button id="btn-begin">Iniciar teste</button>
   </div>
 
@@ -85,7 +85,7 @@ document.addEventListener("DOMContentLoaded", () => {
   const dataAtualEl=document.getElementById("data-atual");
 
   let i=0,answers=[],timer=null;
-  const QUESTION_TIME=5;
+  const QUESTION_TIME=10;
 
   btnBegin.onclick=()=>{sStart.style.display="none";sQuiz.style.display="block";i=0;answers=[];render();};
   btnRestart.onclick=()=>{sResult.style.display="none";sStart.style.display="block";};
